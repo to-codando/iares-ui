@@ -102,11 +102,13 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
   const hostElement = document.createElement(selector);
   const state = component?.store?.state || {};
   const actions = component?.actions || {};
+  const hooks = component?.hooks;
   const componentId = _createId();
   const isFunction = true;
   component?.store?.watchState((data: GenericObjectType) => _updateView(data));
-
+  hooks?.beforeMount?.();
   const _updateView = (payload?: GenericObjectType) => {
+    hooks?.beforeRender?.();
     hostElement.innerHTML = "";
     component?.styles && _bindCssStyles(component?.styles(), selector, componentId);
 
@@ -132,9 +134,11 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
 
     slotsOrigin.forEach((slot) => slot.remove());
     slotsDestiny.forEach((slot) => slot.remove());
+    hooks?.afterRender?.();
   };
 
   _updateView();
+  hooks?.afterMount?.();
 };
 
 export const render: RenderType = (template, context = document.body) => {
