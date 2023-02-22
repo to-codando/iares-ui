@@ -1,0 +1,47 @@
+// {
+//   "compilerOptions": {
+//     "target": "esnext",
+//     "module": "esnext",
+//     "moduleResolution": "node",
+//     "lib": ["es2018", "dom"],
+//     "declaration": true,
+//     "allowJs": true,
+//     "checkJs": true,
+//     "emitDeclarationOnly": true,
+//     "strict": false,
+//     "noImplicitThis": true,
+//     "alwaysStrict": true,
+//     "types": ["node", "mocha", "chai"],
+//     "esModuleInterop": true,
+//     "outDir": "dist"
+//   },
+//   "files": ["browser.d.ts"],
+//   "include": [
+//     "./src/*.js"
+//   ],
+// }
+
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames":true,
+    "declaration": true,
+    "declarationDir": "dist/types",
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "jsx": "react",
+    "lib": ["es6", "dom", "es2020", "es2021"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "resolveJsonModule": true,
+    // "rootDir": "./src",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es5",
+    // "types": ["jest", "node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
