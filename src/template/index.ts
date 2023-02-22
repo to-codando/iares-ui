@@ -3,7 +3,6 @@ import htm from "htm";
 import { HTMType, GenericObjectType } from "./types";
 
 const css = (tags: any, ...values: any[]): string => {
-  console.log(tags);
   return tags
     .map((tag: string, index: number) => {
       return `${tag}${values[index] || ""}`;

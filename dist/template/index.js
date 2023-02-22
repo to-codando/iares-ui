@@ -4,7 +4,6 @@ var css = function (tags) {
     for (var _i = 1; _i < arguments.length; _i++) {
         values[_i - 1] = arguments[_i];
     }
-    console.log(tags);
     return tags
         .map(function (tag, index) {
         return "".concat(tag).concat(values[index] || "");
