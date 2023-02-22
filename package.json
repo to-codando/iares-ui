@@ -1,7 +1,7 @@
 {
     "name": "iares",
     "version": "1.0.0",
-    "description": "",
+    "description": "A reactive library javascript and typescript to build SPA",
     "main": "dist/index.js",
     "types": "dist/types/index.d.ts",
     "files": [
@@ -13,8 +13,16 @@
     },
     "keywords": [],
     "author": "",
-    "license": "ISC",
-    "dependencies": {
+    "license": "MIT",
+    "homepage": "https://github.com/to-codando/iares-ui#readme",
+     "url" : "https://github.com/to-codando/iares-ui/issues",
+    "email" : "rodrigo.desenvolvedor.web@gmail.com",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/to-codando/iares-ui.git",
+      "directory": "apps/iares"
+    },
+    "peerDependencies": {
         "htm": "^3.1.1"
     },
     "devDependencies": {
