@@ -1,10 +1,12 @@
-var _createSelector = function (text) { return text.split(/(?=[A-Z])/).join("-").toLowerCase(); };
+var _createSelector = function (text) {
+    return text.split(/(?=[A-Z])/).join("-").toLowerCase();
+};
 var _createId = function () {
     return Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
         .substring(1);
 };
-var _bindProps = function (element, props, isFactory, componentId) {
+var _bindProps = function (element, props, isFactory, componentId, selector) {
     if (isFactory === void 0) { isFactory = true; }
     if (!props)
         return;
@@ -18,16 +20,20 @@ var _bindProps = function (element, props, isFactory, componentId) {
             var handler = props[attr];
             element.addEventListener(eventName, handler);
         }
-        if (isEvent(attr) === isAction(props[attr]) && isFactory !== true && isEvent(attr) !== true) {
+        if (isEvent(attr) === isAction(props[attr]) &&
+            isFactory !== true &&
+            isEvent(attr) !== true) {
             element.setAttribute(attr, props[attr]);
         }
         if (isCssClass(attr)) {
-            var cssClassNames = _applyCssContext(props[attr], componentId);
+            var styleElement = document.head.querySelector("[id=".concat(selector, "]"));
+            var componentUUID = styleElement === null || styleElement === void 0 ? void 0 : styleElement.getAttribute("component-id");
+            var cssClassNames = _applyCssContext(props[attr], componentUUID);
             element.setAttribute(attr, cssClassNames);
         }
     });
 };
-var _createChildrenByObject = function (template, context, componentId) {
+var _createChildrenByObject = function (template, context, componentId, selector) {
     if (typeof template !== "object")
         context.textContent += template;
     if (typeof template.type === "function") {
@@ -35,22 +41,24 @@ var _createChildrenByObject = function (template, context, componentId) {
     }
     if (typeof template.type === "string") {
         var element = document.createElement(template.type);
-        _bindProps(element, template.props, false, componentId);
-        _createChildren(template.children, element, componentId);
+        _bindProps(element, template.props, false, componentId, selector);
+        _createChildren(template.children, element, componentId, selector);
         context.insertAdjacentElement("beforeend", element);
     }
 };
-var _createChildrenByArray = function (template, context, componentId) {
+var _createChildrenByArray = function (template, context, componentId, selector) {
     template.forEach(function (templateItem) {
-        _createChildrenByObject(templateItem, context, componentId);
+        _createChildrenByObject(templateItem, context, componentId, selector);
     });
 };
-var _createChildren = function (template, context, componentId) {
+var _createChildren = function (template, context, componentId, selector) {
     return !Array.isArray(template)
-        ? _createChildrenByObject(template, context, componentId)
-        : _createChildrenByArray(template, context, componentId);
+        ? _createChildrenByObject(template, context, componentId, selector)
+        : _createChildrenByArray(template, context, componentId, selector);
 };
-var _hasStyles = function (selector) { return document.querySelector("style#".concat(selector)); };
+var _hasStyles = function (selector) {
+    return document.querySelector("style#".concat(selector));
+};
 var _applyCssContext = function (cssText, id) {
     if (!id)
         return cssText;
@@ -63,6 +71,7 @@ var _bindCssStyles = function (styles, selector, componentId) {
     var css = _applyCssContext(styles, componentId);
     var stylesElement = document.createElement("style");
     stylesElement.setAttribute("id", selector);
+    stylesElement.setAttribute("component-id", componentId);
     stylesElement.insertAdjacentHTML("beforeend", css);
     document.head.insertAdjacentElement("beforeend", stylesElement);
 };
@@ -83,13 +92,14 @@ var _createComponent = function (template, context) {
         var _a, _b, _c;
         (_a = hooks === null || hooks === void 0 ? void 0 : hooks.beforeRender) === null || _a === void 0 ? void 0 : _a.call(hooks);
         hostElement.innerHTML = "";
-        (component === null || component === void 0 ? void 0 : component.styles) && _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
-        _bindProps(hostElement, template.props, isFunction, componentId);
-        _createChildren(template.children, hostElement, componentId);
+        (component === null || component === void 0 ? void 0 : component.styles) &&
+            _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
+        _bindProps(hostElement, template.props, isFunction, componentId, selector);
+        _createChildren(template.children, hostElement, componentId, selector);
         context.insertAdjacentElement("beforeend", hostElement);
         var child = template.type({ props: template.props });
         var childHTM = (_b = child.template) === null || _b === void 0 ? void 0 : _b.call(child, { props: props, state: state, actions: actions });
-        _createChildrenByObject(childHTM, hostElement, componentId);
+        _createChildrenByObject(childHTM, hostElement, componentId, selector);
         var slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
         var slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
         slotsOrigin.forEach(function (slotOrigin) {
@@ -111,6 +121,8 @@ export var render = function (template, context) {
     if (context === void 0) { context = document.body; }
     !Array.isArray(template)
         ? _createComponent(template, context)
-        : template.forEach(function (templateItem) { return _createComponent(templateItem, context); });
+        : template.forEach(function (templateItem) {
+            return _createComponent(templateItem, context);
+        });
 };
 //# sourceMappingURL=index.js.map

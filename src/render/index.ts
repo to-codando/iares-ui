@@ -1,7 +1,13 @@
 import { HTMType } from "../template/types";
-import { GenericObjectType, RenderType, TemplateType, BindStylesParamsType } from "./types";
+import {
+  GenericObjectType,
+  RenderType,
+  TemplateType,
+  BindStylesParamsType,
+} from "./types";
 
-const _createSelector = (text: string) => text.split(/(?=[A-Z])/).join("-").toLowerCase();
+const _createSelector = (text: string) =>
+  text.split(/(?=[A-Z])/).join("-").toLowerCase();
 
 const _createId = (): string => {
   return Math.floor((1 + Math.random()) * 0x10000)
@@ -14,6 +20,7 @@ const _bindProps = (
   props: GenericObjectType,
   isFactory = true,
   componentId: string | null,
+  selector: string,
 ) => {
   if (!props) return;
 
@@ -29,12 +36,21 @@ const _bindProps = (
       element.addEventListener(eventName, handler);
     }
 
-    if (isEvent(attr) === isAction(props[attr]) && isFactory !== true && isEvent(attr) !== true) {
+    if (
+      isEvent(attr) === isAction(props[attr]) &&
+      isFactory !== true &&
+      isEvent(attr) !== true
+    ) {
       element.setAttribute(attr, props[attr]);
     }
 
     if (isCssClass(attr)) {
-      const cssClassNames = _applyCssContext(props[attr], componentId);
+      const styleElement = document.head.querySelector(`[id=${selector}]`);
+      const componentUUID = styleElement?.getAttribute("component-id");
+      const cssClassNames = _applyCssContext(
+        props[attr],
+        componentUUID as string,
+      );
       element.setAttribute(attr, cssClassNames);
     }
   });
@@ -44,6 +60,7 @@ const _createChildrenByObject = (
   template: HTMType,
   context: HTMLElement,
   componentId: string | null,
+  selector: string,
 ) => {
   if (typeof template !== "object") context.textContent += template;
 
@@ -53,8 +70,8 @@ const _createChildrenByObject = (
 
   if (typeof template.type === "string") {
     const element = document.createElement(template.type);
-    _bindProps(element, template.props, false, componentId);
-    _createChildren(template.children, element, componentId);
+    _bindProps(element, template.props, false, componentId, selector);
+    _createChildren(template.children, element, componentId, selector);
     context.insertAdjacentElement("beforeend", element);
   }
 };
@@ -63,9 +80,10 @@ const _createChildrenByArray = (
   template: HTMType[],
   context: HTMLElement,
   componentId: string | null,
+  selector: string,
 ) => {
   template.forEach((templateItem) => {
-    _createChildrenByObject(templateItem, context, componentId);
+    _createChildrenByObject(templateItem, context, componentId, selector);
   });
 };
 
@@ -73,12 +91,14 @@ const _createChildren = (
   template: TemplateType,
   context: HTMLElement,
   componentId: string | null,
+  selector: string,
 ) =>
   !Array.isArray(template)
-    ? _createChildrenByObject(template, context, componentId)
-    : _createChildrenByArray(template, context, componentId);
+    ? _createChildrenByObject(template, context, componentId, selector)
+    : _createChildrenByArray(template, context, componentId, selector);
 
-const _hasStyles = (selector: string) => document.querySelector(`style#${selector}`);
+const _hasStyles = (selector: string) =>
+  document.querySelector(`style#${selector}`);
 
 const _applyCssContext = (cssText: string, id: string | null) => {
   if (!id) return cssText;
@@ -86,11 +106,16 @@ const _applyCssContext = (cssText: string, id: string | null) => {
   return cssText.replace(context, id);
 };
 
-const _bindCssStyles: BindStylesParamsType = (styles, selector, componentId) => {
+const _bindCssStyles: BindStylesParamsType = (
+  styles,
+  selector,
+  componentId,
+) => {
   if (_hasStyles(selector)) return;
   const css = _applyCssContext(styles, componentId);
   const stylesElement = document.createElement("style");
   stylesElement.setAttribute("id", selector);
+  stylesElement.setAttribute("component-id", componentId);
   stylesElement.insertAdjacentHTML("beforeend", css);
   document.head.insertAdjacentElement("beforeend", stylesElement);
 };
@@ -107,18 +132,20 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
   const isFunction = true;
   component?.store?.watchState((data: GenericObjectType) => _updateView(data));
   hooks?.beforeMount?.();
+
   const _updateView = (payload?: GenericObjectType) => {
     hooks?.beforeRender?.();
     hostElement.innerHTML = "";
-    component?.styles && _bindCssStyles(component?.styles(), selector, componentId);
+    component?.styles &&
+      _bindCssStyles(component?.styles(), selector, componentId);
 
-    _bindProps(hostElement, template.props, isFunction, componentId);
-    _createChildren(template.children, hostElement, componentId);
+    _bindProps(hostElement, template.props, isFunction, componentId, selector);
+    _createChildren(template.children, hostElement, componentId, selector);
     context.insertAdjacentElement("beforeend", hostElement);
 
     const child = template.type({ props: template.props });
     const childHTM = child.template?.({ props, state, actions });
-    _createChildrenByObject(childHTM, hostElement, componentId);
+    _createChildrenByObject(childHTM, hostElement, componentId, selector);
 
     const slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
     const slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
@@ -144,5 +171,7 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
 export const render: RenderType = (template, context = document.body) => {
   !Array.isArray(template)
     ? _createComponent(template, context)
-    : template.forEach((templateItem) => _createComponent(templateItem, context));
+    : template.forEach((templateItem) =>
+        _createComponent(templateItem, context),
+      );
 };
