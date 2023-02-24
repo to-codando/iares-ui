@@ -34,12 +34,15 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
+    if (Array.isArray(template)) {
+        _createChildrenByArray(template, context, componentId, selector);
+    }
     if (typeof template !== "object")
         context.textContent += template;
-    if (typeof template.type === "function") {
+    if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
         _createComponent(template, context);
     }
-    if (typeof template.type === "string") {
+    if (typeof (template === null || template === void 0 ? void 0 : template.type) === "string") {
         var element = document.createElement(template.type);
         _bindProps(element, template.props, false, componentId, selector);
         _createChildren(template.children, element, componentId, selector);
@@ -77,7 +80,7 @@ var _bindCssStyles = function (styles, selector, componentId) {
 };
 var _createComponent = function (template, context) {
     var _a, _b, _c, _d;
-    var componentFactory = template.type, props = template.props, children = template.children;
+    var componentFactory = template.type, props = template.props;
     var component = componentFactory({ props: props });
     var selector = _createSelector(componentFactory.name);
     var hostElement = document.createElement(selector);
@@ -98,7 +101,7 @@ var _createComponent = function (template, context) {
         _createChildren(template.children, hostElement, componentId, selector);
         context.insertAdjacentElement("beforeend", hostElement);
         var child = template.type({ props: template.props });
-        var childHTM = (_b = child.template) === null || _b === void 0 ? void 0 : _b.call(child, { props: props, state: state, actions: actions });
+        var childHTM = (_b = child.template) === null || _b === void 0 ? void 0 : _b.call(child, { props: props || {}, state: state, actions: actions });
         _createChildrenByObject(childHTM, hostElement, componentId, selector);
         var slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
         var slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));

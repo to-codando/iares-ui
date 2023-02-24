@@ -62,13 +62,17 @@ const _createChildrenByObject = (
   componentId: string | null,
   selector: string,
 ) => {
+  if (Array.isArray(template)) {
+    _createChildrenByArray(template, context, componentId, selector);
+  }
+
   if (typeof template !== "object") context.textContent += template;
 
-  if (typeof template.type === "function") {
+  if (typeof template?.type === "function") {
     _createComponent(template, context);
   }
 
-  if (typeof template.type === "string") {
+  if (typeof template?.type === "string") {
     const element = document.createElement(template.type);
     _bindProps(element, template.props, false, componentId, selector);
     _createChildren(template.children, element, componentId, selector);
@@ -121,7 +125,7 @@ const _bindCssStyles: BindStylesParamsType = (
 };
 
 const _createComponent = (template: HTMType, context: HTMLElement) => {
-  const { type: componentFactory, props, children } = template;
+  const { type: componentFactory, props } = template;
   const component = componentFactory({ props });
   const selector = _createSelector(componentFactory.name);
   const hostElement = document.createElement(selector);
@@ -144,7 +148,7 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
     context.insertAdjacentElement("beforeend", hostElement);
 
     const child = template.type({ props: template.props });
-    const childHTM = child.template?.({ props, state, actions });
+    const childHTM = child.template?.({ props: props || {}, state, actions });
     _createChildrenByObject(childHTM, hostElement, componentId, selector);
 
     const slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
