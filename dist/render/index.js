@@ -19,7 +19,9 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
             var handler = props[attr];
             element.addEventListener(eventName, handler);
         }
-        if (isEvent(attr) === isAction(props[attr]) && isFactory !== true && isEvent(attr) !== true) {
+        if (isEvent(attr) === isAction(props[attr]) &&
+            isFactory !== true &&
+            isEvent(attr) !== true) {
             element.setAttribute(attr, props[attr]);
         }
         if (isCssClass(attr)) {
@@ -31,7 +33,6 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
-    // console.log(template);
     if (typeof template !== "object")
         return (context.textContent += template);
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
@@ -135,8 +136,11 @@ var _createComponent = function (template, context) {
         if (!(child === null || child === void 0 ? void 0 : child.template) && typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
             var childHTM = template === null || template === void 0 ? void 0 : template.type({ props: props || {}, state: state, actions: actions });
             _bindProps(hostElement, template.props, isFunction, componentId, selector);
+            if (!childHTM) {
+                hostElement.remove();
+                return;
+            }
             _createChildrenByObject(childHTM, hostElement, componentId, selector);
-            context.insertAdjacentElement("beforeend", hostElement);
         }
         var slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
         var slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
@@ -187,6 +191,8 @@ var _createComponent = function (template, context) {
 };
 export var render = function (template, context) {
     if (context === void 0) { context = document.body; }
-    !Array.isArray(template) ? _createComponent(template, context) : template.forEach(function (templateItem) { return _createComponent(templateItem, context); });
+    !Array.isArray(template)
+        ? _createComponent(template, context)
+        : template.forEach(function (templateItem) { return _createComponent(templateItem, context); });
 };
 //# sourceMappingURL=index.js.map
