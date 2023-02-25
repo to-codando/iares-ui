@@ -62,6 +62,7 @@ const _createChildrenByObject = (
   componentId: string | null,
   selector: string,
 ) => {
+  console.log(template);
   if (typeof template !== "object") return (context.textContent += template);
 
   if (typeof template?.type === "function") {
@@ -206,14 +207,16 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
       const componentContextElement = document.head?.querySelector(`#${selector}`);
       const slotTargetSelector = `slot[id=${targetId}]`;
       const targetSlot = context.querySelector(slotTargetSelector);
+      const slotFragment = document.createDocumentFragment();
 
       scope.uuid = contextStyleElement?.getAttribute("component-id") || null;
       scope.componentId = componentContextElement?.getAttribute("component-id") || null;
 
       Array.from(slotOrigin.children).forEach((childElement) => {
         targetContext && childElement.setAttribute("sloted", targetContext);
-        targetSlot?.insertAdjacentElement("afterend", childElement);
+        slotFragment.appendChild(childElement);
       });
+      targetSlot?.after(slotFragment);
     });
 
     slotsOrigin.forEach((slot) => slot.remove());

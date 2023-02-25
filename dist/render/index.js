@@ -33,6 +33,7 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
+    console.log(template);
     if (typeof template !== "object")
         return (context.textContent += template);
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
@@ -156,12 +157,14 @@ var _createComponent = function (template, context) {
             var componentContextElement = (_b = document.head) === null || _b === void 0 ? void 0 : _b.querySelector("#".concat(selector));
             var slotTargetSelector = "slot[id=".concat(targetId, "]");
             var targetSlot = context.querySelector(slotTargetSelector);
+            var slotFragment = document.createDocumentFragment();
             scope.uuid = (contextStyleElement === null || contextStyleElement === void 0 ? void 0 : contextStyleElement.getAttribute("component-id")) || null;
             scope.componentId = (componentContextElement === null || componentContextElement === void 0 ? void 0 : componentContextElement.getAttribute("component-id")) || null;
             Array.from(slotOrigin.children).forEach(function (childElement) {
                 targetContext && childElement.setAttribute("sloted", targetContext);
-                targetSlot === null || targetSlot === void 0 ? void 0 : targetSlot.insertAdjacentElement("afterend", childElement);
+                slotFragment.appendChild(childElement);
             });
+            targetSlot === null || targetSlot === void 0 ? void 0 : targetSlot.after(slotFragment);
         });
         slotsOrigin.forEach(function (slot) { return slot.remove(); });
         slotsDestiny.forEach(function (slot) { return slot.remove(); });
