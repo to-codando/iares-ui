@@ -62,7 +62,6 @@ const _createChildrenByObject = (
   componentId: string | null,
   selector: string,
 ) => {
-  console.log(template);
   if (typeof template !== "object") return (context.textContent += template);
 
   if (typeof template?.type === "function") {
