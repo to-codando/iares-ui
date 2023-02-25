@@ -31,19 +31,23 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
+    // console.log(template);
     if (typeof template !== "object")
-        context.textContent += template;
+        return (context.textContent += template);
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
         _createComponent(template, context);
+        return;
     }
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "string") {
         var element = document.createElement(template.type);
         _bindProps(element, template.props, false, componentId, selector);
         _createChildren(template.children, element, componentId, selector);
         context.insertAdjacentElement("beforeend", element);
+        return;
     }
     if (Array.isArray(template)) {
         _createChildrenByArray(template, context, componentId, selector);
+        return;
     }
 };
 var _createChildrenByArray = function (template, context, componentId, selector) {
@@ -124,8 +128,16 @@ var _createComponent = function (template, context) {
         _createChildren(template.children, hostElement, componentId, selector);
         context.insertAdjacentElement("beforeend", hostElement);
         var child = template.type({ props: template.props });
-        var childHTM = (_a = child.template) === null || _a === void 0 ? void 0 : _a.call(child, { props: props || {}, state: state, actions: actions });
-        _createChildrenByObject(childHTM, hostElement, componentId, selector);
+        if (child === null || child === void 0 ? void 0 : child.template) {
+            var childHTM = (_a = child.template) === null || _a === void 0 ? void 0 : _a.call(child, { props: props || {}, state: state, actions: actions });
+            _createChildrenByObject(childHTM, hostElement, componentId, selector);
+        }
+        if (!(child === null || child === void 0 ? void 0 : child.template) && typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
+            var childHTM = template === null || template === void 0 ? void 0 : template.type({ props: props || {}, state: state, actions: actions });
+            _bindProps(hostElement, template.props, isFunction, componentId, selector);
+            _createChildrenByObject(childHTM, hostElement, componentId, selector);
+            context.insertAdjacentElement("beforeend", hostElement);
+        }
         var slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
         var slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
         var scope = {
