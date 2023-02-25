@@ -62,7 +62,9 @@ const _createChildrenByObject = (
   componentId: string | null,
   selector: string,
 ) => {
-  if (typeof template !== "object") return (context.textContent += template);
+  if (typeof template === "string") {
+    return (context.textContent += template);
+  }
 
   if (typeof template?.type === "function") {
     _createComponent(template, context);
@@ -80,6 +82,14 @@ const _createChildrenByObject = (
   if (Array.isArray(template)) {
     _createChildrenByArray(template, context, componentId, selector);
     return;
+  }
+
+  if (typeof template === "object" && !Array.isArray(template)) {
+    const error = new Error();
+    error.stack = `ComponentError:Component is not a named function and must be.
+    ${JSON.stringify(template)}
+    `;
+    throw error;
   }
 };
 
@@ -147,6 +157,8 @@ const _createEventDrive: EventDriveFactoryType = () => {
 };
 
 const _createComponent = (template: HTMType, context: HTMLElement) => {
+  if (typeof template.type !== "function")
+    throw new Error("Component is not a named function and must be.");
   const { type: componentFactory, props } = template;
   const component = componentFactory({ props });
   const selector = _createSelector(componentFactory.name);
@@ -213,8 +225,18 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
 
       Array.from(slotOrigin.children).forEach((childElement) => {
         targetContext && childElement.setAttribute("sloted", targetContext);
-        slotFragment.appendChild(childElement);
+        slotFragment.append(childElement);
+
+        if (
+          slotOrigin.textContent !== "" &&
+          slotFragment.textContent !== slotOrigin.textContent
+        ) {
+          const tempalteError = new Error();
+          tempalteError.stack = `TemplateError: Invalid slot element. A content is not a valid html element and must be.\n ${slotOrigin.textContent}`;
+          throw tempalteError;
+        }
       });
+
       targetSlot?.after(slotFragment);
     });
 

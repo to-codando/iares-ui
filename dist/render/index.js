@@ -33,9 +33,9 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
-    console.log(template);
-    if (typeof template !== "object")
+    if (typeof template === "string") {
         return (context.textContent += template);
+    }
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
         _createComponent(template, context);
         return;
@@ -50,6 +50,11 @@ var _createChildrenByObject = function (template, context, componentId, selector
     if (Array.isArray(template)) {
         _createChildrenByArray(template, context, componentId, selector);
         return;
+    }
+    if (typeof template === "object" && !Array.isArray(template)) {
+        var error = new Error();
+        error.stack = "ComponentError:Component is not a named function and must be.\n    ".concat(JSON.stringify(template), "\n    ");
+        throw error;
     }
 };
 var _createChildrenByArray = function (template, context, componentId, selector) {
@@ -103,6 +108,8 @@ var _createEventDrive = function () {
 };
 var _createComponent = function (template, context) {
     var _a, _b;
+    if (typeof template.type !== "function")
+        throw new Error("Component is not a named function and must be.");
     var componentFactory = template.type, props = template.props;
     var component = componentFactory({ props: props });
     var selector = _createSelector(componentFactory.name);
@@ -162,7 +169,13 @@ var _createComponent = function (template, context) {
             scope.componentId = (componentContextElement === null || componentContextElement === void 0 ? void 0 : componentContextElement.getAttribute("component-id")) || null;
             Array.from(slotOrigin.children).forEach(function (childElement) {
                 targetContext && childElement.setAttribute("sloted", targetContext);
-                slotFragment.appendChild(childElement);
+                slotFragment.append(childElement);
+                if (slotOrigin.textContent !== "" &&
+                    slotFragment.textContent !== slotOrigin.textContent) {
+                    var tempalteError = new Error();
+                    tempalteError.stack = "TemplateError: Invalid slot element. A content is not a valid html element and must be.\n ".concat(slotOrigin.textContent);
+                    throw tempalteError;
+                }
             });
             targetSlot === null || targetSlot === void 0 ? void 0 : targetSlot.after(slotFragment);
         });
