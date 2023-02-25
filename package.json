@@ -1,6 +1,6 @@
 {
     "name": "iares",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "A reactive library javascript and typescript to build SPA",
     "main": "dist/index.js",
     "types": "dist/types/index.d.ts",
