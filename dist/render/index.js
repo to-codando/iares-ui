@@ -1,10 +1,9 @@
-var _createSelector = function (text) {
-    return text.split(/(?=[A-Z])/).join("-").toLowerCase();
-};
+var _createSelector = function (text) { return text.split(/(?=[A-Z])/).join("-").toLowerCase(); };
 var _createId = function () {
-    return Math.floor((1 + Math.random()) * 0x10000)
+    var randomStr = Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
         .substring(1);
+    return "".concat(randomStr);
 };
 var _bindProps = function (element, props, isFactory, componentId, selector) {
     if (isFactory === void 0) { isFactory = true; }
@@ -20,9 +19,7 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
             var handler = props[attr];
             element.addEventListener(eventName, handler);
         }
-        if (isEvent(attr) === isAction(props[attr]) &&
-            isFactory !== true &&
-            isEvent(attr) !== true) {
+        if (isEvent(attr) === isAction(props[attr]) && isFactory !== true && isEvent(attr) !== true) {
             element.setAttribute(attr, props[attr]);
         }
         if (isCssClass(attr)) {
@@ -34,9 +31,6 @@ var _bindProps = function (element, props, isFactory, componentId, selector) {
     });
 };
 var _createChildrenByObject = function (template, context, componentId, selector) {
-    if (Array.isArray(template)) {
-        _createChildrenByArray(template, context, componentId, selector);
-    }
     if (typeof template !== "object")
         context.textContent += template;
     if (typeof (template === null || template === void 0 ? void 0 : template.type) === "function") {
@@ -47,6 +41,9 @@ var _createChildrenByObject = function (template, context, componentId, selector
         _bindProps(element, template.props, false, componentId, selector);
         _createChildren(template.children, element, componentId, selector);
         context.insertAdjacentElement("beforeend", element);
+    }
+    if (Array.isArray(template)) {
+        _createChildrenByArray(template, context, componentId, selector);
     }
 };
 var _createChildrenByArray = function (template, context, componentId, selector) {
@@ -59,9 +56,7 @@ var _createChildren = function (template, context, componentId, selector) {
         ? _createChildrenByObject(template, context, componentId, selector)
         : _createChildrenByArray(template, context, componentId, selector);
 };
-var _hasStyles = function (selector) {
-    return document.querySelector("style#".concat(selector));
-};
+var _hasStyles = function (selector) { return document.querySelector("style#".concat(selector)); };
 var _applyCssContext = function (cssText, id) {
     if (!id)
         return cssText;
@@ -78,8 +73,30 @@ var _bindCssStyles = function (styles, selector, componentId) {
     stylesElement.insertAdjacentHTML("beforeend", css);
     document.head.insertAdjacentElement("beforeend", stylesElement);
 };
+var _createEventDrive = function () {
+    var beforeRender = function (handler) {
+        handler();
+    };
+    var afterRender = function (handler) {
+        handler();
+    };
+    var beforeMount = function (handler) {
+        handler();
+    };
+    var afterMount = function (handler) {
+        handler();
+    };
+    var destroy = function () { };
+    return {
+        beforeRender: beforeRender,
+        afterRender: afterRender,
+        beforeMount: beforeMount,
+        afterMount: afterMount,
+        destroy: destroy,
+    };
+};
 var _createComponent = function (template, context) {
-    var _a, _b, _c, _d;
+    var _a, _b;
     var componentFactory = template.type, props = template.props;
     var component = componentFactory({ props: props });
     var selector = _createSelector(componentFactory.name);
@@ -89,43 +106,75 @@ var _createComponent = function (template, context) {
     var hooks = component === null || component === void 0 ? void 0 : component.hooks;
     var componentId = _createId();
     var isFunction = true;
+    var _eventDrive = _createEventDrive();
     (_b = component === null || component === void 0 ? void 0 : component.store) === null || _b === void 0 ? void 0 : _b.watchState(function (data) { return _updateView(data); });
-    (_c = hooks === null || hooks === void 0 ? void 0 : hooks.beforeMount) === null || _c === void 0 ? void 0 : _c.call(hooks);
+    _eventDrive.beforeMount(function () {
+        var _a;
+        (_a = hooks === null || hooks === void 0 ? void 0 : hooks.beforeMount) === null || _a === void 0 ? void 0 : _a.call(hooks);
+    });
     var _updateView = function (payload) {
-        var _a, _b, _c;
-        (_a = hooks === null || hooks === void 0 ? void 0 : hooks.beforeRender) === null || _a === void 0 ? void 0 : _a.call(hooks);
+        var _a;
+        _eventDrive.beforeMount(function () {
+            var _a;
+            (_a = hooks === null || hooks === void 0 ? void 0 : hooks.beforeRender) === null || _a === void 0 ? void 0 : _a.call(hooks);
+        });
         hostElement.innerHTML = "";
-        (component === null || component === void 0 ? void 0 : component.styles) &&
-            _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
+        (component === null || component === void 0 ? void 0 : component.styles) && _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
         _bindProps(hostElement, template.props, isFunction, componentId, selector);
         _createChildren(template.children, hostElement, componentId, selector);
         context.insertAdjacentElement("beforeend", hostElement);
         var child = template.type({ props: template.props });
-        var childHTM = (_b = child.template) === null || _b === void 0 ? void 0 : _b.call(child, { props: props || {}, state: state, actions: actions });
+        var childHTM = (_a = child.template) === null || _a === void 0 ? void 0 : _a.call(child, { props: props || {}, state: state, actions: actions });
         _createChildrenByObject(childHTM, hostElement, componentId, selector);
         var slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
         var slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
+        var scope = {
+            uuid: null,
+            componentId: null,
+        };
         slotsOrigin.forEach(function (slotOrigin) {
-            var targetId = slotOrigin.getAttribute("target");
+            var _a, _b;
+            var targetId = slotOrigin.getAttribute("target") || "";
+            var targetContext = slotOrigin.getAttribute("ctx");
+            var contextStyleElement = (_a = document.head) === null || _a === void 0 ? void 0 : _a.querySelector("#".concat(targetContext));
+            var componentContextElement = (_b = document.head) === null || _b === void 0 ? void 0 : _b.querySelector("#".concat(selector));
             var slotTargetSelector = "slot[id=".concat(targetId, "]");
             var targetSlot = context.querySelector(slotTargetSelector);
+            scope.uuid = (contextStyleElement === null || contextStyleElement === void 0 ? void 0 : contextStyleElement.getAttribute("component-id")) || null;
+            scope.componentId = (componentContextElement === null || componentContextElement === void 0 ? void 0 : componentContextElement.getAttribute("component-id")) || null;
             Array.from(slotOrigin.children).forEach(function (childElement) {
+                targetContext && childElement.setAttribute("sloted", targetContext);
                 targetSlot === null || targetSlot === void 0 ? void 0 : targetSlot.insertAdjacentElement("afterend", childElement);
             });
         });
         slotsOrigin.forEach(function (slot) { return slot.remove(); });
         slotsDestiny.forEach(function (slot) { return slot.remove(); });
-        (_c = hooks === null || hooks === void 0 ? void 0 : hooks.afterRender) === null || _c === void 0 ? void 0 : _c.call(hooks);
+        _eventDrive.afterRender(function () {
+            var _a;
+            (_a = hooks === null || hooks === void 0 ? void 0 : hooks.afterRender) === null || _a === void 0 ? void 0 : _a.call(hooks);
+            var slotedElements = Array.from(hostElement.querySelectorAll("[sloted]"));
+            var _bindCssContext = function (element) {
+                if (!scope.uuid)
+                    return;
+                if (!scope.componentId)
+                    return;
+                var regex = new RegExp(scope.componentId);
+                var cssClassNames = element.classList.toString();
+                element.className = cssClassNames.replace(regex, scope.uuid);
+                var children = Array.from(element.querySelectorAll("[class$=\"".concat(scope.componentId, "\"]")));
+                children.forEach(function (element) { return _bindCssContext(element); });
+            };
+            slotedElements.forEach(function (element) { return _bindCssContext(element); });
+        });
     };
     _updateView();
-    (_d = hooks === null || hooks === void 0 ? void 0 : hooks.afterMount) === null || _d === void 0 ? void 0 : _d.call(hooks);
+    _eventDrive.afterMount(function () {
+        var _a;
+        (_a = hooks === null || hooks === void 0 ? void 0 : hooks.afterMount) === null || _a === void 0 ? void 0 : _a.call(hooks);
+    });
 };
 export var render = function (template, context) {
     if (context === void 0) { context = document.body; }
-    !Array.isArray(template)
-        ? _createComponent(template, context)
-        : template.forEach(function (templateItem) {
-            return _createComponent(templateItem, context);
-        });
+    !Array.isArray(template) ? _createComponent(template, context) : template.forEach(function (templateItem) { return _createComponent(templateItem, context); });
 };
 //# sourceMappingURL=index.js.map

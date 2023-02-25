@@ -1,29 +1,18 @@
 import { HTMType } from "../template/types";
-import {
-  GenericObjectType,
-  RenderType,
-  TemplateType,
-  BindStylesParamsType,
-} from "./types";
+import { ScopeType, GenericObjectType, RenderType, TemplateType, BindStylesParamsType, CallbackType, EventDriveFactoryType } from "./types";
 
-const _createSelector = (text: string) =>
-  text.split(/(?=[A-Z])/).join("-").toLowerCase();
+const _createSelector = (text: string) => text.split(/(?=[A-Z])/).join("-").toLowerCase();
 
 const _createId = (): string => {
-  return Math.floor((1 + Math.random()) * 0x10000)
+  const randomStr = Math.floor((1 + Math.random()) * 0x10000)
     .toString(16)
     .substring(1);
+
+  return `${randomStr}`;
 };
 
-const _bindProps = (
-  element: HTMLElement,
-  props: GenericObjectType,
-  isFactory = true,
-  componentId: string | null,
-  selector: string,
-) => {
+const _bindProps = (element: HTMLElement, props: GenericObjectType, isFactory = true, componentId: string | null, selector: string) => {
   if (!props) return;
-
   const attrs = Object.keys(props);
   const isCssClass = (value: string) => /^class/.test(value);
   const isEvent = (value: string) => /^on/.test(value);
@@ -36,36 +25,20 @@ const _bindProps = (
       element.addEventListener(eventName, handler);
     }
 
-    if (
-      isEvent(attr) === isAction(props[attr]) &&
-      isFactory !== true &&
-      isEvent(attr) !== true
-    ) {
+    if (isEvent(attr) === isAction(props[attr]) && isFactory !== true && isEvent(attr) !== true) {
       element.setAttribute(attr, props[attr]);
     }
 
     if (isCssClass(attr)) {
       const styleElement = document.head.querySelector(`[id=${selector}]`);
       const componentUUID = styleElement?.getAttribute("component-id");
-      const cssClassNames = _applyCssContext(
-        props[attr],
-        componentUUID as string,
-      );
+      const cssClassNames = _applyCssContext(props[attr], componentUUID as string);
       element.setAttribute(attr, cssClassNames);
     }
   });
 };
 
-const _createChildrenByObject = (
-  template: HTMType,
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
-) => {
-  if (Array.isArray(template)) {
-    _createChildrenByArray(template, context, componentId, selector);
-  }
-
+const _createChildrenByObject = (template: HTMType, context: HTMLElement, componentId: string | null, selector: string) => {
   if (typeof template !== "object") context.textContent += template;
 
   if (typeof template?.type === "function") {
@@ -78,31 +51,24 @@ const _createChildrenByObject = (
     _createChildren(template.children, element, componentId, selector);
     context.insertAdjacentElement("beforeend", element);
   }
+
+  if (Array.isArray(template)) {
+    _createChildrenByArray(template, context, componentId, selector);
+  }
 };
 
-const _createChildrenByArray = (
-  template: HTMType[],
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
-) => {
+const _createChildrenByArray = (template: HTMType[], context: HTMLElement, componentId: string | null, selector: string) => {
   template.forEach((templateItem) => {
     _createChildrenByObject(templateItem, context, componentId, selector);
   });
 };
 
-const _createChildren = (
-  template: TemplateType,
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
-) =>
+const _createChildren = (template: TemplateType, context: HTMLElement, componentId: string | null, selector: string) =>
   !Array.isArray(template)
     ? _createChildrenByObject(template, context, componentId, selector)
     : _createChildrenByArray(template, context, componentId, selector);
 
-const _hasStyles = (selector: string) =>
-  document.querySelector(`style#${selector}`);
+const _hasStyles = (selector: string) => document.querySelector(`style#${selector}`);
 
 const _applyCssContext = (cssText: string, id: string | null) => {
   if (!id) return cssText;
@@ -110,11 +76,7 @@ const _applyCssContext = (cssText: string, id: string | null) => {
   return cssText.replace(context, id);
 };
 
-const _bindCssStyles: BindStylesParamsType = (
-  styles,
-  selector,
-  componentId,
-) => {
+const _bindCssStyles: BindStylesParamsType = (styles, selector, componentId) => {
   if (_hasStyles(selector)) return;
   const css = _applyCssContext(styles, componentId);
   const stylesElement = document.createElement("style");
@@ -122,6 +84,30 @@ const _bindCssStyles: BindStylesParamsType = (
   stylesElement.setAttribute("component-id", componentId);
   stylesElement.insertAdjacentHTML("beforeend", css);
   document.head.insertAdjacentElement("beforeend", stylesElement);
+};
+
+const _createEventDrive: EventDriveFactoryType = () => {
+  const beforeRender = (handler: CallbackType) => {
+    handler();
+  };
+  const afterRender = (handler: CallbackType) => {
+    handler();
+  };
+  const beforeMount = (handler: CallbackType) => {
+    handler();
+  };
+  const afterMount = (handler: CallbackType) => {
+    handler();
+  };
+  const destroy = () => {};
+
+  return {
+    beforeRender,
+    afterRender,
+    beforeMount,
+    afterMount,
+    destroy,
+  };
 };
 
 const _createComponent = (template: HTMType, context: HTMLElement) => {
@@ -134,14 +120,18 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
   const hooks = component?.hooks;
   const componentId = _createId();
   const isFunction = true;
+  const _eventDrive = _createEventDrive();
   component?.store?.watchState((data: GenericObjectType) => _updateView(data));
-  hooks?.beforeMount?.();
+  _eventDrive.beforeMount(() => {
+    hooks?.beforeMount?.();
+  });
 
   const _updateView = (payload?: GenericObjectType) => {
-    hooks?.beforeRender?.();
+    _eventDrive.beforeMount(() => {
+      hooks?.beforeRender?.();
+    });
     hostElement.innerHTML = "";
-    component?.styles &&
-      _bindCssStyles(component?.styles(), selector, componentId);
+    component?.styles && _bindCssStyles(component?.styles(), selector, componentId);
 
     _bindProps(hostElement, template.props, isFunction, componentId, selector);
     _createChildren(template.children, hostElement, componentId, selector);
@@ -153,29 +143,56 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
 
     const slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
     const slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
+    const scope: ScopeType = {
+      uuid: null,
+      componentId: null,
+    };
 
     slotsOrigin.forEach((slotOrigin) => {
-      const targetId = slotOrigin.getAttribute("target");
+      const targetId = slotOrigin.getAttribute("target") || "";
+      const targetContext = slotOrigin.getAttribute("ctx");
+      const contextStyleElement = document.head?.querySelector(`#${targetContext}`);
+      const componentContextElement = document.head?.querySelector(`#${selector}`);
       const slotTargetSelector = `slot[id=${targetId}]`;
       const targetSlot = context.querySelector(slotTargetSelector);
+
+      scope.uuid = contextStyleElement?.getAttribute("component-id") || null;
+      scope.componentId = componentContextElement?.getAttribute("component-id") || null;
+
       Array.from(slotOrigin.children).forEach((childElement) => {
+        targetContext && childElement.setAttribute("sloted", targetContext);
         targetSlot?.insertAdjacentElement("afterend", childElement);
       });
     });
 
     slotsOrigin.forEach((slot) => slot.remove());
     slotsDestiny.forEach((slot) => slot.remove());
-    hooks?.afterRender?.();
+    _eventDrive.afterRender(() => {
+      hooks?.afterRender?.();
+
+      const slotedElements = Array.from(hostElement.querySelectorAll("[sloted]"));
+
+      const _bindCssContext = (element: HTMLElement) => {
+        if (!scope.uuid) return;
+        if (!scope.componentId) return;
+        const regex = new RegExp(scope.componentId);
+        const cssClassNames = element.classList.toString();
+        element.className = cssClassNames.replace(regex, scope.uuid);
+
+        const children = Array.from(element.querySelectorAll(`[class$="${scope.componentId}"]`));
+        children.forEach((element) => _bindCssContext(element as HTMLElement));
+      };
+
+      slotedElements.forEach((element) => _bindCssContext(element as HTMLElement));
+    });
   };
 
   _updateView();
-  hooks?.afterMount?.();
+  _eventDrive.afterMount(() => {
+    hooks?.afterMount?.();
+  });
 };
 
 export const render: RenderType = (template, context = document.body) => {
-  !Array.isArray(template)
-    ? _createComponent(template, context)
-    : template.forEach((templateItem) =>
-        _createComponent(templateItem, context),
-      );
+  !Array.isArray(template) ? _createComponent(template, context) : template.forEach((templateItem) => _createComponent(templateItem, context));
 };
