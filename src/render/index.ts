@@ -74,7 +74,7 @@ const _createChildrenByObject = (
   if (typeof template?.type === "string") {
     const element = document.createElement(template.type);
     _bindProps(element, template.props, false, componentId, selector);
-    _createChildren(template.children, element, componentId, selector);
+    _createChildren(template.children as TemplateType, element, componentId, selector);
     context.insertAdjacentElement("beforeend", element);
     return;
   }
@@ -182,7 +182,12 @@ const _createComponent = (template: HTMType, context: HTMLElement) => {
     component?.styles && _bindCssStyles(component?.styles(), selector, componentId);
 
     _bindProps(hostElement, template.props, isFunction, componentId, selector);
-    _createChildren(template.children, hostElement, componentId, selector);
+    _createChildren(
+      template.children as TemplateType,
+      hostElement,
+      componentId,
+      selector,
+    );
     context.insertAdjacentElement("beforeend", hostElement);
     const child = template.type({ props: template.props });
 
