@@ -1,8 +1,8 @@
 export declare type GenericObjectType = {
     [key: string]: any;
 };
-export declare type HTMType<Ttype = void, Tchildren = void, Tprops = void> = {
-    type: Ttype | any;
-    children: Tchildren | any[];
-    props: Tprops | any;
+export declare type HTMType<Ttype = any, Tchildren = any, Tprops = any> = {
+    type: Ttype | string;
+    children: Tchildren | [];
+    props: Tprops | GenericObjectType;
 };

@@ -1,283 +1,325 @@
 import { HTMType } from "../template/types";
 import {
-  ScopeType,
-  GenericObjectType,
-  RenderType,
-  TemplateType,
-  BindStylesParamsType,
-  CallbackType,
-  EventDriveFactoryType,
+	ScopeType,
+	GenericObjectType,
+	RenderType,
+	TemplateType,
+	BindStylesParamsType,
+	CallbackType,
+	EventDriveFactoryType,
 } from "./types";
 
-const _createSelector = (text: string) => text.split(/(?=[A-Z])/).join("-").toLowerCase();
+import { pubsubFactory } from "../pubsub";
+
+export const eventDrive = pubsubFactory();
+
+const _createSelector = (text: string) =>
+	text.split(/(?=[A-Z])/).join("-").toLowerCase();
 
 const _createId = (): string => {
-  const randomStr = Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1);
+	const randomStr = Math.floor((1 + Math.random()) * 0x10000)
+		.toString(16)
+		.substring(1);
 
-  return `${randomStr}`;
+	return `${randomStr}`;
 };
 
 const _bindProps = (
-  element: HTMLElement,
-  props: GenericObjectType,
-  isFactory = true,
-  componentId: string | null,
-  selector: string,
+	element: HTMLElement,
+	props: GenericObjectType,
+	isFactory = true,
+	componentId: string | null,
+	selector: string,
 ) => {
-  if (!props) return;
-  const attrs = Object.keys(props);
-  const isCssClass = (value: string) => /^class/.test(value);
-  const isEvent = (value: string) => /^on/.test(value);
-  const isAction = (value: string) => typeof value === "function";
+	if (!props) return;
+	const attrs = Object.keys(props);
+	const isCssClass = (value: string) => /^class/.test(value);
+	const isEvent = (value: string) => /^on/.test(value);
+	const isAction = (value: string) => typeof value === "function";
 
-  attrs.forEach((attr) => {
-    if (isEvent(attr)) {
-      const eventName = attr.toLowerCase().replace(/on/, "");
-      const handler = props[attr];
-      element.addEventListener(eventName, handler);
-    }
+	attrs.forEach((attr) => {
+		if (isEvent(attr)) {
+			const eventName = attr.toLowerCase().replace(/on/, "");
+			const handler = props[attr];
+			element.addEventListener(eventName, handler);
+		}
 
-    if (
-      isEvent(attr) === isAction(props[attr]) &&
-      isFactory !== true &&
-      isEvent(attr) !== true
-    ) {
-      element.setAttribute(attr, props[attr]);
-    }
+		if (
+			isEvent(attr) === isAction(props[attr]) &&
+			isFactory !== true &&
+			isEvent(attr) !== true
+		) {
+			element.setAttribute(attr, props[attr]);
+		}
 
-    if (isCssClass(attr)) {
-      const styleElement = document.head.querySelector(`[id=${selector}]`);
-      const componentUUID = styleElement?.getAttribute("component-id");
-      const cssClassNames = _applyCssContext(props[attr], componentUUID as string);
-      element.setAttribute(attr, cssClassNames);
-    }
-  });
+		if (isCssClass(attr)) {
+			const styleElement = document.head.querySelector(`[id=${selector}]`);
+			const componentUUID = styleElement?.getAttribute("component-id");
+			const cssClassNames = _applyCssContext(
+				props[attr],
+				componentUUID as string,
+			);
+			element.setAttribute(attr, cssClassNames);
+		}
+	});
 };
 
 const _createChildrenByObject = (
-  template: HTMType,
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
+	template: HTMType,
+	context: HTMLElement,
+	componentId: string | null,
+	selector: string,
 ) => {
-  if (typeof template === "string") {
-    return (context.textContent += template);
-  }
+	if (typeof template === "string") {
+		return (context.textContent += template);
+	}
 
-  if (typeof template?.type === "function") {
-    _createComponent(template, context);
-    return;
-  }
+	if (typeof template?.type === "function") {
+		_createComponent(template, context);
+		return;
+	}
 
-  if (typeof template?.type === "string") {
-    const element = document.createElement(template.type);
-    _bindProps(element, template.props, false, componentId, selector);
-    _createChildren(template.children as TemplateType, element, componentId, selector);
-    context.insertAdjacentElement("beforeend", element);
-    return;
-  }
+	if (typeof template?.type === "string") {
+		const element = document.createElement(template.type);
+		_bindProps(element, template.props, false, componentId, selector);
+		_createChildren(
+			template.children as TemplateType,
+			element,
+			componentId,
+			selector,
+		);
+		context.insertAdjacentElement("beforeend", element);
+		return;
+	}
 
-  if (Array.isArray(template)) {
-    _createChildrenByArray(template, context, componentId, selector);
-    return;
-  }
+	if (Array.isArray(template)) {
+		_createChildrenByArray(template, context, componentId, selector);
+		return;
+	}
 
-  if (typeof template === "object" && !Array.isArray(template)) {
-    const error = new Error();
-    error.stack = `ComponentError:Component is not a named function and must be.
+	if (typeof template === "object" && !Array.isArray(template)) {
+		const error = new Error();
+		error.stack = `ComponentError:Component is not a named function and must be.
     ${JSON.stringify(template)}
     `;
-    throw error;
-  }
+		throw error;
+	}
 };
 
 const _createChildrenByArray = (
-  template: HTMType[],
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
+	template: HTMType[],
+	context: HTMLElement,
+	componentId: string | null,
+	selector: string,
 ) => {
-  template.forEach((templateItem) => {
-    _createChildrenByObject(templateItem, context, componentId, selector);
-  });
+	template.forEach((templateItem) => {
+		_createChildrenByObject(templateItem, context, componentId, selector);
+	});
 };
 
 const _createChildren = (
-  template: TemplateType,
-  context: HTMLElement,
-  componentId: string | null,
-  selector: string,
+	template: TemplateType,
+	context: HTMLElement,
+	componentId: string | null,
+	selector: string,
 ) =>
-  !Array.isArray(template)
-    ? _createChildrenByObject(template, context, componentId, selector)
-    : _createChildrenByArray(template, context, componentId, selector);
+	!Array.isArray(template)
+		? _createChildrenByObject(template, context, componentId, selector)
+		: _createChildrenByArray(template, context, componentId, selector);
 
-const _hasStyles = (selector: string) => document.querySelector(`style#${selector}`);
+const _hasStyles = (selector: string) =>
+	document.querySelector(`style#${selector}`);
 
 const _applyCssContext = (cssText: string, id: string | null) => {
-  if (!id) return cssText;
-  const context = /ctx/g;
-  return cssText.replace(context, id);
+	if (!id) return cssText;
+	const context = /ctx/g;
+	return cssText.replace(context, id);
 };
 
-const _bindCssStyles: BindStylesParamsType = (styles, selector, componentId) => {
-  if (_hasStyles(selector)) return;
-  const css = _applyCssContext(styles, componentId);
-  const stylesElement = document.createElement("style");
-  stylesElement.setAttribute("id", selector);
-  stylesElement.setAttribute("component-id", componentId);
-  stylesElement.insertAdjacentHTML("beforeend", css);
-  document.head.insertAdjacentElement("beforeend", stylesElement);
+const _bindCssStyles: BindStylesParamsType = (
+	styles,
+	selector,
+	componentId,
+) => {
+	if (_hasStyles(selector)) return;
+	const css = _applyCssContext(styles, componentId);
+	const stylesElement = document.createElement("style");
+	stylesElement.setAttribute("id", selector);
+	stylesElement.setAttribute("component-id", componentId);
+	stylesElement.insertAdjacentHTML("beforeend", css);
+	document.head.insertAdjacentElement("beforeend", stylesElement);
 };
 
 const _createEventDrive: EventDriveFactoryType = () => {
-  const beforeRender = (handler: CallbackType) => {
-    handler();
-  };
-  const afterRender = (handler: CallbackType) => {
-    handler();
-  };
-  const beforeMount = (handler: CallbackType) => {
-    handler();
-  };
-  const afterMount = (handler: CallbackType) => {
-    handler();
-  };
-  const destroy = () => {};
+	const beforeRender = (handler: CallbackType) => {
+		handler();
+	};
+	const afterRender = (handler: CallbackType) => {
+		handler();
+	};
+	const beforeMount = (handler: CallbackType) => {
+		handler();
+	};
+	const afterMount = (handler: CallbackType) => {
+		handler();
+	};
+	const destroy = (handler: CallbackType) => {
+		handler();
+	};
 
-  return {
-    beforeRender,
-    afterRender,
-    beforeMount,
-    afterMount,
-    destroy,
-  };
+	return {
+		beforeRender,
+		afterRender,
+		beforeMount,
+		afterMount,
+		destroy,
+	};
 };
 
 const _createComponent = (template: HTMType, context: HTMLElement) => {
-  if (typeof template.type !== "function")
-    throw new Error("Component is not a named function and must be.");
-  const { type: componentFactory, props } = template;
-  const component = componentFactory({ props });
-  const selector = _createSelector(componentFactory.name);
-  const hostElement = document.createElement(selector);
-  const state = component?.store?.state || {};
-  const actions = component?.actions || {};
-  const hooks = component?.hooks;
-  const componentId = _createId();
-  const isFunction = true;
-  const _eventDrive = _createEventDrive();
-  component?.store?.watchState((data: GenericObjectType) => _updateView(data));
-  _eventDrive.beforeMount(() => {
-    hooks?.beforeMount?.();
-  });
+	if (typeof template.type !== "function")
+		throw new Error("Component is not a named function and must be.");
+	const { type: componentFactory, props } = template;
+	const component = componentFactory({ props });
+	const selector = _createSelector(componentFactory.name);
+	const hostElement = document.createElement(selector);
+	const state = component?.store?.state || {};
+	const actions = component?.actions || {};
+	const hooks = component?.hooks;
+	const componentId = _createId();
+	const isFunction = true;
+	const _eventDrive = _createEventDrive();
+	component?.store?.watchState((data: GenericObjectType) => _updateView(data));
+	_eventDrive.beforeMount(() => {
+		hooks?.beforeMount?.();
+	});
 
-  const _updateView = (payload?: GenericObjectType) => {
-    _eventDrive.beforeMount(() => {
-      hooks?.beforeRender?.();
-    });
-    hostElement.innerHTML = "";
-    component?.styles && _bindCssStyles(component?.styles(), selector, componentId);
+	const _updateView = (payload?: GenericObjectType) => {
+		_eventDrive.beforeMount(() => {
+			hooks?.beforeRender?.();
+		});
+		hostElement.innerHTML = "";
+		component?.styles &&
+			_bindCssStyles(component?.styles(), selector, componentId);
 
-    _bindProps(hostElement, template.props, isFunction, componentId, selector);
-    _createChildren(
-      template.children as TemplateType,
-      hostElement,
-      componentId,
-      selector,
-    );
-    context.insertAdjacentElement("beforeend", hostElement);
-    const child = template.type({ props: template.props });
+		_bindProps(hostElement, template.props, isFunction, componentId, selector);
+		_createChildren(
+			template.children as TemplateType,
+			hostElement,
+			componentId,
+			selector,
+		);
+		context.insertAdjacentElement("beforeend", hostElement);
+		const child = template.type({ props: template.props });
 
-    if (child?.template) {
-      const childHTM = child.template?.({ props: props || {}, state, actions });
-      _createChildrenByObject(childHTM, hostElement, componentId, selector);
-    }
+		if (child?.template) {
+			const childHTM = child.template?.({ props: props || {}, state, actions });
+			_createChildrenByObject(childHTM, hostElement, componentId, selector);
+		}
 
-    if (!child?.template && typeof template?.type === "function") {
-      const childHTM = template?.type({ props: props || {}, state, actions });
+		if (!child?.template && typeof template?.type === "function") {
+			const childHTM = template?.type({ props: props || {}, state, actions });
 
-      _bindProps(hostElement, template.props, isFunction, componentId, selector);
+			_bindProps(
+				hostElement,
+				template.props,
+				isFunction,
+				componentId,
+				selector,
+			);
 
-      if (!childHTM) {
-        hostElement.remove();
-        return;
-      }
-      _createChildrenByObject(childHTM, hostElement, componentId, selector);
-    }
+			if (!childHTM) {
+				hostElement.remove();
+				return;
+			}
+			_createChildrenByObject(childHTM, hostElement, componentId, selector);
+		}
 
-    const slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
-    const slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
+		const slotsOrigin = Array.from(context.querySelectorAll("slot[target]"));
+		const slotsDestiny = Array.from(context.querySelectorAll("slot[id]"));
 
-    const scope: ScopeType = {
-      uuid: null,
-      componentId: null,
-    };
+		const scope: ScopeType = {
+			uuid: null,
+			componentId: null,
+		};
 
-    slotsOrigin.forEach((slotOrigin) => {
-      const targetId = slotOrigin.getAttribute("target") || "";
-      const targetContext = slotOrigin.getAttribute("ctx");
-      const contextStyleElement = document.head?.querySelector(`#${targetContext}`);
-      const componentContextElement = document.head?.querySelector(`#${selector}`);
-      const slotTargetSelector = `slot[id=${targetId}]`;
-      const targetSlot = context.querySelector(slotTargetSelector);
-      const slotFragment = document.createDocumentFragment();
+		slotsOrigin.forEach((slotOrigin) => {
+			const targetId = slotOrigin.getAttribute("target") || "";
+			const targetContext = slotOrigin.getAttribute("ctx");
+			const contextStyleElement = document.head?.querySelector(
+				`#${targetContext}`,
+			);
+			const componentContextElement = document.head?.querySelector(
+				`#${selector}`,
+			);
+			const slotTargetSelector = `slot[id=${targetId}]`;
+			const targetSlot = context.querySelector(slotTargetSelector);
+			const slotFragment = document.createDocumentFragment();
 
-      scope.uuid = contextStyleElement?.getAttribute("component-id") || null;
-      scope.componentId = componentContextElement?.getAttribute("component-id") || null;
+			scope.uuid = contextStyleElement?.getAttribute("component-id") || null;
+			scope.componentId =
+				componentContextElement?.getAttribute("component-id") || null;
 
-      Array.from(slotOrigin.children).forEach((childElement) => {
-        targetContext && childElement.setAttribute("sloted", targetContext);
-        slotFragment.append(childElement);
+			Array.from(slotOrigin.children).forEach((childElement) => {
+				targetContext && childElement.setAttribute("sloted", targetContext);
+				slotFragment.append(childElement);
 
-        if (
-          slotOrigin.textContent !== "" &&
-          slotFragment.textContent !== slotOrigin.textContent
-        ) {
-          const tempalteError = new Error();
-          tempalteError.stack = `TemplateError: Invalid slot element. A content is not a valid html element and must be.\n ${slotOrigin.textContent}`;
-          throw tempalteError;
-        }
-      });
+				if (
+					slotOrigin.textContent !== "" &&
+					slotFragment.textContent !== slotOrigin.textContent
+				) {
+					const tempalteError = new Error();
+					tempalteError.stack = `TemplateError: Invalid slot element. A content is not a valid html element and must be.\n ${slotOrigin.textContent}`;
+					throw tempalteError;
+				}
+			});
 
-      targetSlot?.after(slotFragment);
-    });
+			targetSlot?.after(slotFragment);
+		});
 
-    slotsOrigin.forEach((slot) => slot.remove());
-    slotsDestiny.forEach((slot) => slot.remove());
+		slotsOrigin.forEach((slot) => slot.remove());
+		slotsDestiny.forEach((slot) => slot.remove());
 
-    _eventDrive.afterRender(() => {
-      hooks?.afterRender?.();
+		_eventDrive.afterRender(() => {
+			hooks?.afterRender?.();
 
-      const slotedElements = Array.from(hostElement.querySelectorAll("[sloted]"));
+			const slotedElements = Array.from(
+				hostElement.querySelectorAll("[sloted]"),
+			);
 
-      const _bindCssContext = (element: HTMLElement) => {
-        if (!scope.uuid) return;
-        if (!scope.componentId) return;
-        const regex = new RegExp(scope.componentId);
-        const cssClassNames = element.classList.toString();
-        element.className = cssClassNames.replace(regex, scope.uuid);
+			const _bindCssContext = (element: HTMLElement) => {
+				if (!scope.uuid) return;
+				if (!scope.componentId) return;
+				const regex = new RegExp(scope.componentId);
+				const cssClassNames = element.classList.toString();
+				element.className = cssClassNames.replace(regex, scope.uuid);
 
-        const children = Array.from(
-          element.querySelectorAll(`[class$="${scope.componentId}"]`),
-        );
-        children.forEach((element) => _bindCssContext(element as HTMLElement));
-      };
+				const children = Array.from(
+					element.querySelectorAll(`[class$="${scope.componentId}"]`),
+				);
+				children.forEach((element) => _bindCssContext(element as HTMLElement));
+			};
 
-      slotedElements.forEach((element) => _bindCssContext(element as HTMLElement));
-    });
-  };
+			slotedElements.forEach((element) =>
+				_bindCssContext(element as HTMLElement),
+			);
+		});
 
-  _updateView();
-  _eventDrive.afterMount(() => {
-    hooks?.afterMount?.();
-  });
+		eventDrive.on("ON-DESTROY", (payload) => {
+			hooks?.destroy?.();
+		});
+	};
+
+	_updateView();
+	_eventDrive.afterMount(() => {
+		hooks?.afterMount?.();
+	});
 };
 
 export const render: RenderType = (template, context = document.body) => {
-  !Array.isArray(template)
-    ? _createComponent(template, context)
-    : template.forEach((templateItem) => _createComponent(templateItem, context));
+	!Array.isArray(template)
+		? _createComponent(template, context)
+		: template.forEach((templateItem) =>
+				_createComponent(templateItem, context),
+		  );
 };

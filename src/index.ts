@@ -1,24 +1,35 @@
 export { createApp } from "./app";
 export { createState } from "./state";
 export { css, html } from "./template";
-export { render } from './render'
+export { render } from "./render";
+export { router } from "./router";
+export { pubsubFactory } from "./pubsub";
 
 export {
-  AppParamsType,
-  AppPropsType,
-  AppSetupParamsType,
-  AppType
-} from './app/types'
+	AppParamsType,
+	AppPropsType,
+	AppSetupParamsType,
+	AppType,
+} from "./app/types";
 
 export {
-  TEmpty,
-  TGenericObject,
-  TStateHandler,
-  TStateHandlerRemove,
-  TStateValue,
-  TState,
+	TEmpty,
+	TGenericObject,
+	TStateHandler,
+	TStateHandlerRemove,
+	TStateValue,
+	TState,
 } from "./state/types";
 
+export { HTMType } from "./template/types";
+
 export {
-  HTMType
-} from './template/types'
+	TRouter,
+	TRoute,
+} from "./router/types";
+
+export {
+	TPubsub,
+	THandler,
+	Tsubscriber,
+} from "./pubsub/types";

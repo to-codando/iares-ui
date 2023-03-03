@@ -1,4 +1,8 @@
-var _createSelector = function (text) { return text.split(/(?=[A-Z])/).join("-").toLowerCase(); };
+import { pubsubFactory } from "../pubsub";
+export var eventDrive = pubsubFactory();
+var _createSelector = function (text) {
+    return text.split(/(?=[A-Z])/).join("-").toLowerCase();
+};
 var _createId = function () {
     var randomStr = Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
@@ -67,7 +71,9 @@ var _createChildren = function (template, context, componentId, selector) {
         ? _createChildrenByObject(template, context, componentId, selector)
         : _createChildrenByArray(template, context, componentId, selector);
 };
-var _hasStyles = function (selector) { return document.querySelector("style#".concat(selector)); };
+var _hasStyles = function (selector) {
+    return document.querySelector("style#".concat(selector));
+};
 var _applyCssContext = function (cssText, id) {
     if (!id)
         return cssText;
@@ -97,7 +103,9 @@ var _createEventDrive = function () {
     var afterMount = function (handler) {
         handler();
     };
-    var destroy = function () { };
+    var destroy = function (handler) {
+        handler();
+    };
     return {
         beforeRender: beforeRender,
         afterRender: afterRender,
@@ -132,7 +140,8 @@ var _createComponent = function (template, context) {
             (_a = hooks === null || hooks === void 0 ? void 0 : hooks.beforeRender) === null || _a === void 0 ? void 0 : _a.call(hooks);
         });
         hostElement.innerHTML = "";
-        (component === null || component === void 0 ? void 0 : component.styles) && _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
+        (component === null || component === void 0 ? void 0 : component.styles) &&
+            _bindCssStyles(component === null || component === void 0 ? void 0 : component.styles(), selector, componentId);
         _bindProps(hostElement, template.props, isFunction, componentId, selector);
         _createChildren(template.children, hostElement, componentId, selector);
         context.insertAdjacentElement("beforeend", hostElement);
@@ -166,7 +175,8 @@ var _createComponent = function (template, context) {
             var targetSlot = context.querySelector(slotTargetSelector);
             var slotFragment = document.createDocumentFragment();
             scope.uuid = (contextStyleElement === null || contextStyleElement === void 0 ? void 0 : contextStyleElement.getAttribute("component-id")) || null;
-            scope.componentId = (componentContextElement === null || componentContextElement === void 0 ? void 0 : componentContextElement.getAttribute("component-id")) || null;
+            scope.componentId =
+                (componentContextElement === null || componentContextElement === void 0 ? void 0 : componentContextElement.getAttribute("component-id")) || null;
             Array.from(slotOrigin.children).forEach(function (childElement) {
                 targetContext && childElement.setAttribute("sloted", targetContext);
                 slotFragment.append(childElement);
@@ -196,7 +206,13 @@ var _createComponent = function (template, context) {
                 var children = Array.from(element.querySelectorAll("[class$=\"".concat(scope.componentId, "\"]")));
                 children.forEach(function (element) { return _bindCssContext(element); });
             };
-            slotedElements.forEach(function (element) { return _bindCssContext(element); });
+            slotedElements.forEach(function (element) {
+                return _bindCssContext(element);
+            });
+        });
+        eventDrive.on("ON-DESTROY", function (payload) {
+            var _a;
+            (_a = hooks === null || hooks === void 0 ? void 0 : hooks.destroy) === null || _a === void 0 ? void 0 : _a.call(hooks);
         });
     };
     _updateView();
@@ -209,6 +225,8 @@ export var render = function (template, context) {
     if (context === void 0) { context = document.body; }
     !Array.isArray(template)
         ? _createComponent(template, context)
-        : template.forEach(function (templateItem) { return _createComponent(templateItem, context); });
+        : template.forEach(function (templateItem) {
+            return _createComponent(templateItem, context);
+        });
 };
 //# sourceMappingURL=index.js.map
